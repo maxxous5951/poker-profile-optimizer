@@ -22,7 +22,7 @@ Relie deux projets existants :
 
 ## Feuille de route
 
-- [ ] Mesurer les mains/seconde avec `--prwin-max 10000`
+- [x] Mesurer les mains/seconde avec `--prwin-max 10000` (voir « Mesures »)
 - [ ] Ajouter `--json` à la CLI de PokerSim (bb/100, intervalle de confiance, mains par joueur)
 - [ ] `make_pool.py` : génération reproductible du pool de bots
 - [ ] `optimize.py` : boucle évolutive avec évaluation en deux temps (peu de mains, puis gros volume pour les meilleurs) et sauvegarde à chaque génération
@@ -34,3 +34,16 @@ Relie deux projets existants :
 - Les variantes ne couvrent que ce que permettent les paramètres d'`ohpg` (tailles de mise fixes, `use_stats` limité à nit / fish / maniaque).
 - Un profil qui bat le pool ne bat pas forcément de vrais joueurs : c'est le rôle de la validation.
 - Les sites de poker en ligne interdisent généralement les bots : usage hors-ligne, recherche et tests uniquement.
+
+## Mesures
+
+Cash 6-max, 6 profils générés par `ohpg` (TAG, LAG, Nit, Maniac, Fish, Balanced), PokerTracker simulé actif, 2 coeurs, Linux, `pokersim` en Release :
+
+| prwin | mains/s |
+|---|---|
+| plafonné à 10 000 | ~3 200 |
+| sans plafond | ~3 450 |
+
+- Les profils générés n'appellent jamais `prwin` (0 occurrence dans les `.ohf`) : le plafond ne change rien tant que le générateur ne l'utilise pas.
+- Ordre de grandeur : 100 millions de mains = environ 8 h sur 2 coeurs, la vitesse étant à peu près proportionnelle au nombre de coeurs.
+- Les « milliards de mains en quelques minutes » ne sont donc pas atteignables ; en revanche des dizaines de millions par nuit le sont.

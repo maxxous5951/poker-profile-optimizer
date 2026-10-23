@@ -27,6 +27,20 @@ pokersim --format cash --players 6 --games 20 --hands 1000 --oh-root /chemin/ver
   --json res.json --player BAL_1=pool/profiles/BAL_1.ohf --player TAG_1=pool/profiles/TAG_1.ohf ...
 ```
 
+### Lancer l'optimisation puis la validation
+
+```
+python optimize.py --pokersim /chemin/pokersim --oh-root /chemin/OH15-by-nolog --ohpg /chemin/OpenHoldem-Profile-Generator-WIP \
+  --pool pool --run runs/run1 --gens 30            # Ctrl+C puis --resume pour reprendre
+python validate.py --pokersim ... --oh-root ... --ohpg ... --pool pool --run runs/run1 --tables 30 --games 10 --hands 2000
+```
+
+- Génération 0 : les 6 presets d'`ohpg` + copies mutées. Ensuite : croisement + mutation, étape 1 (tables courtes) sur tous les enfants, étape 2 (gros volume) sur les `--refine` meilleurs. Score de sélection = moyenne - k x erreur-type (`--k`, défaut 1).
+- Gènes optimisés : 23 paramètres de style par défaut (ranges d'ouverture, 3bet, défense, c-bet, barrels, bluffs river, tolérance de call, tailles de mise). `--genes a,b,c` pour choisir ; `--use-stats` active `use_stats` et ajoute 16 paramètres d'exploitation.
+- Les bots de validation ne sont **jamais** utilisés par `optimize.py`. `validate.py` joue le candidat et les 6 presets sur les mêmes tables et les mêmes graines (graines différentes de l'entraînement) et affiche l'écart entraînement - validation (surapprentissage).
+- Rake à 0 par défaut (somme nulle : bb/100 > 0 = bat le champ). `--rake 5 --rake-cap 30` pour inclure un rake de 5 % plafonné à 3 BB. Attention : `pokersim` applique 5 % sans plafond si on ne précise rien.
+- Précision : sur 8 000 mains l'intervalle de confiance est d'environ ±30 bb/100 ; il faut de l'ordre de 2 millions de mains pour descendre vers ±2 bb/100 (l'erreur diminue avec la racine du nombre de mains).
+
 ## Pool d'adversaires (~15 bots)
 
 - 6 bases : Balanced (2), TAG (3), LAG (3), Nit (2), Maniac (2), Calling Station (3).
@@ -40,9 +54,9 @@ pokersim --format cash --players 6 --games 20 --hands 1000 --oh-root /chemin/ver
 - [x] Mesurer les mains/seconde avec `--prwin-max 10000` (voir « Mesures »)
 - [x] `--json` pour la CLI de PokerSim (profils + une entrée par session pour l'intervalle de confiance) : `patches/0001-pokersim-cli-json.patch`
 - [x] `make_pool.py` : génération reproductible du pool de bots
-- [ ] `optimize.py` : boucle évolutive avec évaluation en deux temps (peu de mains, puis gros volume pour les meilleurs) et sauvegarde à chaque génération
+- [x] `optimize.py` : boucle évolutive avec évaluation en deux temps et sauvegarde/reprise à chaque génération
 - [ ] Mains dupliquées (mêmes cartes, places permutées) pour réduire la variance
-- [ ] Validation sur le pool de test
+- [x] `validate.py` : validation sur les bots jamais vus + comparaison aux presets d'ohpg
 
 ## Limites connues
 

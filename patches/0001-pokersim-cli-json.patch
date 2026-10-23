@@ -1,0 +1,122 @@
+diff --git a/PokerSim/apps/cli/main.cpp b/PokerSim/apps/cli/main.cpp
+index 9cf818b..71328e3 100644
+--- a/PokerSim/apps/cli/main.cpp
++++ b/PokerSim/apps/cli/main.cpp
+@@ -29,13 +29,14 @@ static void usage() {
+         "  --pt-db FILE               base PokerTracker simulée de départ (statistiques déjà connues sur les adversaires)\n"
+         "  --pt-save FILE             écrit la base (départ + mains de cette simulation) ; avec --pt-db FILE identique, elle s'enrichit\n"
+         "  --pt-show                  affiche les statistiques PokerTracker de chaque joueur en fin de simulation\n"
++        "  --json FILE                écrit les résultats en JSON (profils + sessions) ; '-' = sortie standard\n"
+         "  --no-pt                    désactive le PokerTracker simulé (les symboles pt_* renvoient -1)\n");
+ }
+ 
+ int main(int argc, char** argv) {
+     try {
+         SimConfig cfg;
+-        std::string cfgPath, hhPath, ohRoot;
++        std::string cfgPath, hhPath, ohRoot, jsonPath;
+         bool ptShow = false;
+         for (int i = 1; i < argc; ++i) if (!std::strcmp(argv[i], "--config") && i + 1 < argc) cfgPath = argv[i + 1];
+         if (!cfgPath.empty()) cfg = SimConfig::fromJsonFile(cfgPath);
+@@ -70,6 +71,7 @@ int main(int argc, char** argv) {
+             else if (a == "--no-pt") cfg.ptEnabled = false;
+             else if (a == "--pt-show") ptShow = true;
+             else if (a == "--oh-root") ohRoot = val();
++            else if (a == "--json") jsonPath = val();
+             else if (a == "--prwin-max") cfg.prwinMaxIterations = std::atoi(val());
+             else if (a == "--player") {
+                 std::string v = val();
+@@ -92,6 +94,16 @@ int main(int argc, char** argv) {
+         };
+         if (!hhPath.empty()) cfg.handHistoryPath = hhPath;
+         SimSummary s = runSimulation(cfg, oh::profileBrainFactory(ohRoot), false, progress);
++        if (jsonPath == "-") {
++            std::fputs(formatSummaryJson(cfg, s).c_str(), stdout);
++            std::fputc('\n', stdout);
++            return 0;
++        }
++        if (!jsonPath.empty()) {
++            std::ofstream jf(jsonPath, std::ios::binary);
++            if (!jf) throw std::runtime_error("Impossible d'écrire " + jsonPath);
++            jf << formatSummaryJson(cfg, s);
++        }
+         std::fputs(formatSummary(cfg, s).c_str(), stdout);
+         {
+             auto unk = oh::collectUnknownSymbols();
+diff --git a/PokerSim/include/pokersim/runner.hpp b/PokerSim/include/pokersim/runner.hpp
+index ad04ad4..c925d20 100644
+--- a/PokerSim/include/pokersim/runner.hpp
++++ b/PokerSim/include/pokersim/runner.hpp
+@@ -43,5 +43,7 @@ std::string formatHandHistory(const HandRecord& h, const std::vector<std::string
+ // Une partie/session entière : en-tête, toutes les mains (records), classement final. Texte UTF-8.
+ std::string formatGameHistory(const GameResult& g, const SimConfig& cfg);
+ std::string formatSummary(const SimConfig& cfg, const SimSummary& s);
++// Même contenu en JSON (profils + une entrée par session), pour l'optimisation automatique.
++std::string formatSummaryJson(const SimConfig& cfg, const SimSummary& s);
+ 
+ }  // namespace ps
+diff --git a/PokerSim/src/runner.cpp b/PokerSim/src/runner.cpp
+index e97d040..da8580c 100644
+--- a/PokerSim/src/runner.cpp
++++ b/PokerSim/src/runner.cpp
+@@ -10,6 +10,7 @@
+ #include <sstream>
+ #include <stdexcept>
+ #include <thread>
++#include "nlohmann/json.hpp"
+ 
+ namespace ps {
+ 
+@@ -300,4 +301,52 @@ std::string formatSummary(const SimConfig& cfg, const SimSummary& s) {
+     return o.str();
+ }
+ 
++// Résultats lisibles par machine : un bloc par profil + une ligne par session (permet de calculer un intervalle de confiance).
++std::string formatSummaryJson(const SimConfig& cfg, const SimSummary& s) {
++    using nlohmann::json;
++    json j;
++    long long hands = 0;
++    for (auto& g : s.games) hands += g.hands;
++    j["format"] = formatName(cfg.format);
++    j["cash"] = cfg.isCash();
++    j["players"] = cfg.numPlayers;
++    j["sessions_count"] = s.games.size();
++    j["hands"] = hands;
++    j["seconds"] = s.seconds;
++    j["cancelled"] = s.cancelled;
++    j["big_blind"] = cfg.cashBb;
++    j["profiles"] = json::array();
++    for (auto& p : s.profiles) {
++        json x;
++        x["name"] = p.name;
++        x["games"] = p.games;
++        x["wins"] = p.wins;
++        x["hands"] = p.hands;
++        x["rebuys"] = p.rebuys;
++        x["net_chips"] = p.netChips;
++        x["bb100"] = cfg.isCash() ? p.bb100(cfg.cashBb) : 0.0;
++        x["total_net"] = p.totalNet;
++        x["roi"] = p.roi();
++        x["avg_place"] = p.avgPlace();
++        j["profiles"].push_back(x);
++    }
++    j["sessions"] = json::array();
++    for (auto& g : s.games) {
++        json sg;
++        sg["game"] = g.game;
++        sg["hands"] = g.hands;
++        sg["players"] = json::array();
++        for (auto& p : g.players) {
++            json x;
++            x["name"] = p.name;
++            x["hands"] = p.hands;
++            x["net_chips"] = p.netChips;
++            x["net"] = p.net;
++            sg["players"].push_back(x);
++        }
++        j["sessions"].push_back(sg);
++    }
++    return j.dump();
++}
++
+ }  // namespace ps

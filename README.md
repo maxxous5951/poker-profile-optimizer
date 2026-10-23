@@ -13,18 +13,33 @@ Relie deux projets existants :
 3. Sélection selon le bb/100 et son intervalle de confiance, mutation, génération suivante.
 4. Validation finale sur des bots jamais vus pendant l'entraînement.
 
+## Utilisation
+
+```
+# 1. Appliquer le patch --json au simulateur (une seule fois), puis recompiler pokersim
+cd OH15-by-nolog && git apply /chemin/vers/poker-profile-optimizer/patches/0001-pokersim-cli-json.patch
+
+# 2. Générer le pool de 15 bots (même graine = même pool)
+python make_pool.py --ohpg /chemin/vers/OpenHoldem-Profile-Generator-WIP --out pool --seed 1
+
+# 3. Faire jouer des bots du pool, résultats en JSON
+pokersim --format cash --players 6 --games 20 --hands 1000 --oh-root /chemin/vers/OH15-by-nolog \
+  --json res.json --player BAL_1=pool/profiles/BAL_1.ohf --player TAG_1=pool/profiles/TAG_1.ohf ...
+```
+
 ## Pool d'adversaires (~15 bots)
 
-- 6 bases : Balanced, TAG, LAG, Nit, Maniac, Calling Station.
-- 2 à 3 variantes par base (paramètres perturbés de 20 à 30 %, graine fixe).
-- 10 bots d'entraînement, 5 bots de validation (jamais utilisés pour optimiser).
+- 6 bases : Balanced (2), TAG (3), LAG (3), Nit (2), Maniac (2), Calling Station (3).
+- Chaque variante perturbe ~85 paramètres de style (ranges, fréquences, tailles de mise) de ±15 % (variante 1), ±25 % (2) ou ±35 % (3) ; les tailles de mise varient 2,5 fois moins. Graine fixe.
+- 10 bots d'entraînement, 5 bots de validation (BAL_2, TAG_3, LAG_3, NIT_2, FISH_3), jamais utilisés pour optimiser. Chaque style est présent dans l'entraînement.
+- Liste complète et paramètres modifiés : `pool.json`.
 - Noms uniques (le PokerTracker simulé identifie les joueurs par leur nom).
 
 ## Feuille de route
 
 - [x] Mesurer les mains/seconde avec `--prwin-max 10000` (voir « Mesures »)
-- [ ] Ajouter `--json` à la CLI de PokerSim (bb/100, intervalle de confiance, mains par joueur)
-- [ ] `make_pool.py` : génération reproductible du pool de bots
+- [x] `--json` pour la CLI de PokerSim (profils + une entrée par session pour l'intervalle de confiance) : `patches/0001-pokersim-cli-json.patch`
+- [x] `make_pool.py` : génération reproductible du pool de bots
 - [ ] `optimize.py` : boucle évolutive avec évaluation en deux temps (peu de mains, puis gros volume pour les meilleurs) et sauvegarde à chaque génération
 - [ ] Mains dupliquées (mêmes cartes, places permutées) pour réduire la variance
 - [ ] Validation sur le pool de test

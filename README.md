@@ -13,7 +13,12 @@ Relie deux projets existants :
 3. Sélection selon le bb/100 et son intervalle de confiance, mutation, génération suivante.
 4. Validation finale sur des bots jamais vus pendant l'entraînement.
 
-## Utilisation
+## Interface graphique
+
+La branche [`gui-optimizer`](https://github.com/maxxous5951/OH15-by-nolog/tree/gui-optimizer) de PokerSim ajoute un onglet **Optimisation** qui pilote ces scripts : environnement, création du pool, lancement / arrêt / reprise, courbe de progression, validation et export du meilleur profil. Elle contient déjà le `--json` (le patch ci-dessous n'est alors pas nécessaire).
+Les dossiers `poker-profile-optimizer` et `OpenHoldem-Profile-Generator-WIP` placés à côté de `pokersim_gui.exe` (ou un ou plusieurs niveaux au-dessus) sont trouvés automatiquement.
+
+## Utilisation en ligne de commande
 
 ```
 # 1. Appliquer le patch --json au simulateur (une seule fois), puis recompiler pokersim

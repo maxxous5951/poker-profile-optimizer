@@ -1,5 +1,7 @@
 # poker-profile-optimizer
 
+> **Ces scripts vivent maintenant dans le dépôt du générateur** : [`OpenHoldem-Profile-Generator-WIP/optimizer`](https://github.com/maxxous5951/OpenHoldem-Profile-Generator-WIP/tree/add-optimizer/optimizer) (branche `add-optimizer`). Ce dépôt-ci n'est plus mis à jour.
+
 Optimisation automatique de profils OpenHoldem par simulation massive.
 
 Relie deux projets existants :
